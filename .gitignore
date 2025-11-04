@@ -1,3 +1,7 @@
+# Ignore underscore-prefixed files/folders anywhere
+**/_*
+**/_*/
+
 # CLion / JetBrains
 .idea/
 cmake-build-debug/
