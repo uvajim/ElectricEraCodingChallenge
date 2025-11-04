@@ -87,16 +87,13 @@ bool isWhitespaceOnly(const std::string& str) {
 
 bool computeUptime(const ChargingNetwork& chargingNetwork) {
     // total up seconds of up/down per charger ID
-    std::unordered_map<int, uint32_t> uptimes;
-    std::unordered_map<int, uint32_t> downtimes;
+    std::unordered_map<int, uint64_t> uptimes;
+    std::unordered_map<int, uint64_t> downtimes;
     std::vector<StationUptimeReport> finalResult;
+    Charger* prevChargerPtr = nullptr;
 
-    // 1. For each charger, walk its reports in chronological order
     for (const auto& [chargerPtr, heap] : chargingNetwork.reports) {
-        // Make a working copy of the min-heap so we can pop in order
         auto tempHeap = heap;
-
-        // Nothing to do if empty
         if (tempHeap.empty()) {
             continue;
         }
@@ -106,11 +103,11 @@ bool computeUptime(const ChargingNetwork& chargingNetwork) {
         tempHeap.pop();
 
         // Initialize with the first interval's own duration
-        uint32_t upTotal   = 0;
-        uint32_t downTotal = 0;
+        uint64_t upTotal   = 0;
+        uint64_t downTotal = 0;
 
         auto addInterval = [&](ChargerAvailabilityReport* r) {
-            uint32_t duration = (r->endTime > r->startTime)
+            uint64_t duration = (r->endTime > r->startTime)
                               ? (r->endTime - r->startTime)
                               : 0;
             if (r->up) {
@@ -124,13 +121,13 @@ bool computeUptime(const ChargingNetwork& chargingNetwork) {
             ChargerAvailabilityReport* curr = tempHeap.top();
             tempHeap.pop();
 
-            if (prev->endTime < curr->startTime) {
+            if (prevChargerPtr == chargerPtr && prev->endTime < curr->startTime) {
                 std::cerr << "This is an invalid report since another report has an overlapping time slot on the same charger." << std::endl;
                 return false;
             }
 
             if (curr->startTime > prev->endTime) {
-                const uint32_t gap = curr->startTime - prev->endTime;
+                const uint64_t gap = curr->startTime - prev->endTime;
                 downTotal += gap;
 
             }
@@ -142,16 +139,17 @@ bool computeUptime(const ChargingNetwork& chargingNetwork) {
         }
         uptimes[chargerPtr->id]   += upTotal;
         downtimes[chargerPtr->id] += downTotal;
+        prevChargerPtr = chargerPtr;
     }
 
     for (const auto& [stationPtr, chargerSet] : chargingNetwork.network) {
-        uint32_t stationUp   = 0;
-        uint32_t stationDown = 0;
+        uint64_t stationUp   = 0;
+        uint64_t stationDown = 0;
         for (Charger* ch : chargerSet) {
             stationUp   += uptimes[ch->id];
             stationDown += downtimes[ch->id];
         }
-        uint32_t total = stationUp + stationDown;
+        uint64_t total = stationUp + stationDown;
         int stationUptimePercent = (total == 0)
             ? 0
             : static_cast<int>(
