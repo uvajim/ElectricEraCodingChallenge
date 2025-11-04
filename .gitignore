@@ -1,0 +1,29 @@
+# CLion / JetBrains
+.idea/
+cmake-build-debug/
+cmake-build-release/
+
+# Mac / system files
+.DS_Store
+
+# CMake
+CMakeCache.txt
+CMakeFiles/
+CMakeScripts/
+Testing/
+Makefile
+install_manifest.txt
+compile_commands.json
+CTestTestfile.cmake
+_deps/
+
+# Build artifacts
+*.o
+*.obj
+*.exe
+*.out
+*.a
+*.so
+*.dll
+*.dylib
+*.log
